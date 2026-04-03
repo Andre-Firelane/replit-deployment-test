@@ -51,7 +51,7 @@
       color: #374151;
     }
 
-    input[type="text"], textarea {
+    input[type="text"], textarea, select {
       width: 100%;
       padding: 0.65rem 0.85rem;
       border: 1px solid #d1d5db;
@@ -61,9 +61,10 @@
       transition: border-color 0.2s;
       margin-bottom: 0.75rem;
       font-family: inherit;
+      background: white;
     }
 
-    input[type="text"]:focus, textarea:focus {
+    input[type="text"]:focus, textarea:focus, select:focus {
       border-color: #6366f1;
       box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
     }
@@ -103,11 +104,15 @@
       align-items: flex-start;
       gap: 1rem;
       transition: box-shadow 0.2s;
+      border-left: 4px solid transparent;
     }
 
     .task-item:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
-
     .task-item.done .task-title { text-decoration: line-through; color: #9ca3af; }
+
+    .task-item.priority-high   { border-left-color: #ef4444; }
+    .task-item.priority-medium { border-left-color: #f59e0b; }
+    .task-item.priority-low    { border-left-color: #10b981; }
 
     .task-checkbox {
       width: 20px;
@@ -125,21 +130,27 @@
     .task-meta {
       font-size: 0.75rem;
       color: #9ca3af;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
     }
 
-    .status-badge {
+    .badge {
       display: inline-block;
       font-size: 0.72rem;
       font-weight: 600;
       padding: 0.15rem 0.55rem;
       border-radius: 99px;
-      margin-left: 0.5rem;
       text-transform: uppercase;
       letter-spacing: 0.04em;
     }
 
-    .badge-open { background: #ede9fe; color: #7c3aed; }
-    .badge-done { background: #d1fae5; color: #065f46; }
+    .badge-open   { background: #ede9fe; color: #7c3aed; }
+    .badge-done   { background: #d1fae5; color: #065f46; }
+    .badge-high   { background: #fee2e2; color: #991b1b; }
+    .badge-medium { background: #fef3c7; color: #92400e; }
+    .badge-low    { background: #d1fae5; color: #065f46; }
 
     .task-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
 
@@ -196,6 +207,11 @@
       <h2>Neue Aufgabe</h2>
       <input type="text" id="new-title" placeholder="Titel *" />
       <textarea id="new-desc" placeholder="Beschreibung (optional)"></textarea>
+      <select id="new-priority">
+        <option value="low">🟢 Niedrig</option>
+        <option value="medium" selected>🟡 Mittel</option>
+        <option value="high">🔴 Hoch</option>
+      </select>
       <button class="btn btn-primary" onclick="createTask()">+ Aufgabe hinzufügen</button>
     </div>
 
@@ -212,6 +228,11 @@
       <h2>✏️ Aufgabe bearbeiten</h2>
       <input type="text" id="edit-title" placeholder="Titel *" />
       <textarea id="edit-desc" placeholder="Beschreibung"></textarea>
+      <select id="edit-priority">
+        <option value="low">🟢 Niedrig</option>
+        <option value="medium">🟡 Mittel</option>
+        <option value="high">🔴 Hoch</option>
+      </select>
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
         <button class="btn btn-success" onclick="saveEdit()">Speichern</button>
@@ -257,22 +278,28 @@
         return;
       }
 
+      const priorityLabel = { high: 'Hoch', medium: 'Mittel', low: 'Niedrig' };
+
       list.innerHTML = data.map(task => `
-        <div class="task-item ${task.status === 'done' ? 'done' : ''}" id="task-${task.id}">
+        <div class="task-item ${task.status === 'done' ? 'done' : ''} priority-${task.priority || 'medium'}" id="task-${task.id}">
           <input type="checkbox" class="task-checkbox"
             ${task.status === 'done' ? 'checked' : ''}
             onchange="toggleStatus('${task.id}', this.checked)" />
           <div class="task-body">
-            <div class="task-title">${escHtml(task.title)}
-              <span class="status-badge ${task.status === 'done' ? 'badge-done' : 'badge-open'}">
+            <div class="task-title">${escHtml(task.title)}</div>
+            ${task.description ? `<div class="task-desc">${escHtml(task.description)}</div>` : ''}
+            <div class="task-meta">
+              <span>${formatDate(task.created_at)}</span>
+              <span class="badge ${task.status === 'done' ? 'badge-done' : 'badge-open'}">
                 ${task.status === 'done' ? 'Erledigt' : 'Offen'}
               </span>
+              <span class="badge badge-${task.priority || 'medium'}">
+                ${priorityLabel[task.priority] || 'Mittel'}
+              </span>
             </div>
-            ${task.description ? `<div class="task-desc">${escHtml(task.description)}</div>` : ''}
-            <div class="task-meta">${formatDate(task.created_at)}</div>
           </div>
           <div class="task-actions">
-            <button class="btn btn-ghost" onclick="openModal('${task.id}', \`${escAttr(task.title)}\`, \`${escAttr(task.description || '')}\`)">✏️</button>
+            <button class="btn btn-ghost" onclick="openModal('${task.id}', \`${escAttr(task.title)}\`, \`${escAttr(task.description || '')}\`, '${task.priority || 'medium'}')">✏️</button>
             <button class="btn btn-danger" onclick="deleteTask('${task.id}')">🗑</button>
           </div>
         </div>
@@ -283,13 +310,15 @@
     async function createTask() {
       const title = document.getElementById('new-title').value.trim();
       const description = document.getElementById('new-desc').value.trim();
+      const priority = document.getElementById('new-priority').value;
       if (!title) { alert('Bitte einen Titel eingeben.'); return; }
 
-      const { error } = await db.from('tasks').insert([{ title, description }]);
+      const { error } = await db.from('tasks').insert([{ title, description, priority }]);
       if (error) { setStatus('❌ Fehler: ' + error.message, true); return; }
 
       document.getElementById('new-title').value = '';
       document.getElementById('new-desc').value = '';
+      document.getElementById('new-priority').value = 'medium';
       await loadTasks();
     }
 
@@ -305,10 +334,11 @@
     }
 
     // ── UPDATE (Edit Modal) ───────────────────────────────────────────────────
-    function openModal(id, title, desc) {
+    function openModal(id, title, desc, priority) {
       editingId = id;
       document.getElementById('edit-title').value = title;
       document.getElementById('edit-desc').value = desc;
+      document.getElementById('edit-priority').value = priority || 'medium';
       document.getElementById('edit-modal').classList.add('open');
     }
 
@@ -320,11 +350,12 @@
     async function saveEdit() {
       const title = document.getElementById('edit-title').value.trim();
       const description = document.getElementById('edit-desc').value.trim();
+      const priority = document.getElementById('edit-priority').value;
       if (!title) { alert('Titel darf nicht leer sein.'); return; }
 
       const { error } = await db
         .from('tasks')
-        .update({ title, description })
+        .update({ title, description, priority })
         .eq('id', editingId);
 
       if (error) { setStatus('❌ Fehler: ' + error.message, true); return; }
