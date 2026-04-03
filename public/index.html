@@ -212,6 +212,7 @@
         <option value="medium" selected>🟡 Mittel</option>
         <option value="high">🔴 Hoch</option>
       </select>
+      <input type="date" id="new-due-date" title="Fälligkeitsdatum (optional)" />
       <button class="btn btn-primary" onclick="createTask()">+ Aufgabe hinzufügen</button>
     </div>
 
@@ -233,6 +234,7 @@
         <option value="medium">🟡 Mittel</option>
         <option value="high">🔴 Hoch</option>
       </select>
+      <input type="date" id="edit-due-date" title="Fälligkeitsdatum (optional)" />
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
         <button class="btn btn-success" onclick="saveEdit()">Speichern</button>
@@ -290,6 +292,7 @@
             ${task.description ? `<div class="task-desc">${escHtml(task.description)}</div>` : ''}
             <div class="task-meta">
               <span>${formatDate(task.created_at)}</span>
+              ${task.due_date ? `<span>📅 ${formatDueDate(task.due_date)}</span>` : ''}
               <span class="badge ${task.status === 'done' ? 'badge-done' : 'badge-open'}">
                 ${task.status === 'done' ? 'Erledigt' : 'Offen'}
               </span>
@@ -299,7 +302,7 @@
             </div>
           </div>
           <div class="task-actions">
-            <button class="btn btn-ghost" onclick="openModal('${task.id}', \`${escAttr(task.title)}\`, \`${escAttr(task.description || '')}\`, '${task.priority || 'medium'}')">✏️</button>
+            <button class="btn btn-ghost" onclick="openModal('${task.id}', \`${escAttr(task.title)}\`, \`${escAttr(task.description || '')}\`, '${task.priority || 'medium'}', '${task.due_date || ''}')">✏️</button>
             <button class="btn btn-danger" onclick="deleteTask('${task.id}')">🗑</button>
           </div>
         </div>
@@ -313,12 +316,14 @@
       const priority = document.getElementById('new-priority').value;
       if (!title) { alert('Bitte einen Titel eingeben.'); return; }
 
-      const { error } = await db.from('tasks').insert([{ title, description, priority }]);
+      const due_date = document.getElementById('new-due-date').value || null;
+      const { error } = await db.from('tasks').insert([{ title, description, priority, due_date }]);
       if (error) { setStatus('❌ Fehler: ' + error.message, true); return; }
 
       document.getElementById('new-title').value = '';
       document.getElementById('new-desc').value = '';
       document.getElementById('new-priority').value = 'medium';
+      document.getElementById('new-due-date').value = '';
       await loadTasks();
     }
 
@@ -334,11 +339,12 @@
     }
 
     // ── UPDATE (Edit Modal) ───────────────────────────────────────────────────
-    function openModal(id, title, desc, priority) {
+    function openModal(id, title, desc, priority, dueDate) {
       editingId = id;
       document.getElementById('edit-title').value = title;
       document.getElementById('edit-desc').value = desc;
       document.getElementById('edit-priority').value = priority || 'medium';
+      document.getElementById('edit-due-date').value = dueDate || '';
       document.getElementById('edit-modal').classList.add('open');
     }
 
@@ -353,9 +359,10 @@
       const priority = document.getElementById('edit-priority').value;
       if (!title) { alert('Titel darf nicht leer sein.'); return; }
 
+      const due_date = document.getElementById('edit-due-date').value || null;
       const { error } = await db
         .from('tasks')
-        .update({ title, description, priority })
+        .update({ title, description, priority, due_date })
         .eq('id', editingId);
 
       if (error) { setStatus('❌ Fehler: ' + error.message, true); return; }
@@ -389,6 +396,10 @@
 
     function formatDate(iso) {
       return new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+    }
+
+    function formatDueDate(dateStr) {
+      return new Date(dateStr).toLocaleDateString('de-DE', { dateStyle: 'short' });
     }
 
     // Close modal on overlay click
