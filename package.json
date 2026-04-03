@@ -1,0 +1,14 @@
+{
+  "name": "tasks-crud",
+  "version": "1.0.0",
+  "description": "Mini CRUD App with Supabase – Deployment Test",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "dotenv": "^16.3.1"
+  }
+}
