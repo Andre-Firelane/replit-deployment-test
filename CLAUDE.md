@@ -100,20 +100,25 @@ Project Refs findest du in: Supabase Dashboard → Project Settings → General 
 
 **Reihenfolge ist wichtig: erst DB, dann Code!**
 
-```bash
-# 1. Migration auf Prod anwenden
-SUPABASE_ACCESS_TOKEN=<token> npx supabase link --project-ref yjlannwxvxwtvowhysdq
-SUPABASE_ACCESS_TOKEN=<token> npx supabase db query --linked -f migrations/003_beschreibung.sql
+> ⚠️ **Stoppregel:** Weder die Prod-Migration noch der Merge nach `main` werden ohne ausdrückliche Anweisung des Users ausgeführt. Claude wartet nach jedem Schritt auf Freigabe.
 
-# 2. Code nach main mergen
-git checkout main
-git merge dev
-git pull origin main --rebase   # Replit-Auto-Commits holen
-git push origin main
-git checkout dev
+**Ablauf:**
 
-# 3. In Replit → Publish klicken
-```
+1. Migration auf Dev anwenden → User testet lokal
+2. User gibt explizit "Prod-Migration starten" o.ä. → dann erst:
+   ```bash
+   SUPABASE_ACCESS_TOKEN=<token> npx supabase link --project-ref yjlannwxvxwtvowhysdq
+   SUPABASE_ACCESS_TOKEN=<token> npx supabase db query --linked -f migrations/003_beschreibung.sql
+   ```
+3. User gibt explizit "merge nach main" o.ä. → dann erst:
+   ```bash
+   git checkout main
+   git merge dev
+   git pull origin main --rebase   # Replit-Auto-Commits holen
+   git push origin main
+   git checkout dev
+   ```
+4. User klickt manuell in Replit → Publishing → Publish
 
 ---
 
@@ -154,3 +159,4 @@ PORT=3000
 3. **Immer erst DB migrieren, dann Code deployen**
 4. **Migrations-Dateien niemals rückwirkend ändern** – neue Datei anlegen
 5. **Immer auf `dev` Branch arbeiten**, nie auf `main`
+6. **Prod-Migration und Merge nach `main` nur auf ausdrückliche Anweisung** – Claude wartet nach der Dev-Migration bis der User getestet hat und explizit freigibt
