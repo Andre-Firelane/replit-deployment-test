@@ -16,7 +16,8 @@
 │   └── index.html         # Komplette CRUD-App (Vanilla JS)
 ├── migrations/            # Alle DB-Migrationen in Reihenfolge
 │   ├── 001_create_tasks.sql
-│   └── 002_add_priority_column.sql
+│   ├── 002_add_priority_column.sql
+│   └── 003_add_due_date.sql
 ├── .env                   # Lokale Credentials (niemals committen)
 ├── .env.example           # Vorlage für Credentials
 └── CLAUDE.md              # Dieses Briefing
@@ -45,18 +46,19 @@
 ### Supabase CLI Setup (einmalig)
 
 ```bash
-npm install -g supabase
-supabase login   # öffnet Browser → mit Access Token authentifizieren
+# CLI ist via npx verfügbar – keine globale Installation nötig
+# Access Token unter: supabase.com/dashboard/account/tokens generieren
+# Token in .env eintragen: SUPABASE_ACCESS_TOKEN=sbp_...
 ```
 
 ### Projekte verknüpfen
 
 ```bash
 # Dev-Projekt verknüpfen
-supabase link --project-ref itqxfugwtesmxzwagonn
+SUPABASE_ACCESS_TOKEN=<token> npx supabase link --project-ref itqxfugwtesmxzwagonn
 
-# Für Prod-Operationen (explizit angeben)
-supabase link --project-ref yjlannwxvxwtvowhysdq
+# Prod-Projekt verknüpfen
+SUPABASE_ACCESS_TOKEN=<token> npx supabase link --project-ref yjlannwxvxwtvowhysdq
 ```
 
 Project Refs findest du in: Supabase Dashboard → Project Settings → General → **Reference ID**
@@ -79,7 +81,8 @@ Project Refs findest du in: Supabase Dashboard → Project Settings → General 
 
 3. Migration auf Dev anwenden:
    ```bash
-   supabase db execute --file migrations/003_beschreibung.sql --project-ref DEV_PROJECT_REF
+   SUPABASE_ACCESS_TOKEN=<token> npx supabase link --project-ref itqxfugwtesmxzwagonn
+   SUPABASE_ACCESS_TOKEN=<token> npx supabase db query --linked -f migrations/003_beschreibung.sql
    ```
 
 4. Lokal testen (`node server.js`)
@@ -99,11 +102,13 @@ Project Refs findest du in: Supabase Dashboard → Project Settings → General 
 
 ```bash
 # 1. Migration auf Prod anwenden
-supabase db execute --file migrations/003_beschreibung.sql --project-ref PROD_PROJECT_REF
+SUPABASE_ACCESS_TOKEN=<token> npx supabase link --project-ref yjlannwxvxwtvowhysdq
+SUPABASE_ACCESS_TOKEN=<token> npx supabase db query --linked -f migrations/003_beschreibung.sql
 
 # 2. Code nach main mergen
 git checkout main
 git merge dev
+git pull origin main --rebase   # Replit-Auto-Commits holen
 git push origin main
 git checkout dev
 
